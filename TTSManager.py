@@ -141,7 +141,7 @@ class TTSManager(Observer):
                 duration = element.attrib.get("duration")
                 duration = self.convert_time_string(duration) if duration is not None else None
                 duration_min = float(element.attrib.get("duration_min", root.attrib.get("duration_min", "0.0")))    # config.DURATION_MIN set to 0.0 for now
-                duration_min = float(element.attrib.get("duration_max", root.attrib.get("duration_max", "1.0")))    # config.DURATION_MAX set to 0.0 for now
+                duration_max = float(element.attrib.get("duration_max", root.attrib.get("duration_max", "1.0")))    # config.DURATION_MAX set to 0.0 for now
 
                 voice_element = ET.tostring(element, encoding='unicode')
 
@@ -182,16 +182,26 @@ class TTSManager(Observer):
                                             "sdp_ratio": sdp_ratio,
                                             "speaker_lang": self.speaker_lang
                                             })
-                break_count += local_break_count
+                        # Add duration related info to all segments in the voice element
+                        if duration is not None:
+                            voice_tasks[-1]["duration"] = duration
+                            voice_tasks[-1]["duration_min"] = duration_min
+                            voice_tasks[-1]["duration_max"] = duration_max
+                brk_count += local_break_count
 
-                if duration is None or has_break:
+                if duration is None:
                     # 分段末尾停顿0.75s
                     voice_tasks.append({"break": 0.75})
                 else:
                     # 为了区分分段末尾对齐用的停顿，所以用负数
-                    voice_tasks.append({"break": -(
-                        local_break_count*2+1           # 绝对值表示需要考虑的分段数目（含 break），因为整个 voice 元素共用一个 duration.
-                    )})
+                    voice_tasks.append({
+                        "break": -(
+                            local_break_count*2+1           # 绝对值表示需要考虑的分段数目（含 break），因为整个 voice 元素共用一个 duration.
+                        ),
+                        "duration": duration,
+                        "duration_min": duration_min,
+                        "duration_max": duration_max
+                    })
             elif element.tag == "break":
                 # brk_count大于0说明voice标签中有break
                 if brk_count > 0:
@@ -208,11 +218,34 @@ class TTSManager(Observer):
 
     def process_ssml_infer_task(self, tasks, format):
         audios = []
+        audio_lengths = []
         sampling_rates = []
         last_sampling_rate = 22050
         for task in tasks:
             if task.get("break"):
-                audios.append(np.zeros(int(task.get("break") * last_sampling_rate), dtype=np.int16))
+                num_brk_segments = -int(task.get("break"))
+                if num_brk_segments <= 0:   # Regular break
+                    audios.append(np.zeros(int(task.get("break") * last_sampling_rate), dtype=np.int16))
+                    audio_lengths.append(audios[-1].shape[0])
+                else:   # Duration break
+                    cur_duration = sum(audio_lengths[-num_brk_segments:])
+                    target_duration = int(task.get("duration") * last_sampling_rate)
+                    target_duration_min = int(target_duration * task.get("duration_min"))
+                    target_duration_max = int(target_duration * task.get("duration_max"))
+                    while (cur_duration > target_duration_max):
+                        duration_diff = cur_duration - target_duration_max
+                        if audio_lengths[-1] > duration_diff:
+                            audios[-1] = audios[-1][:-duration_diff]
+                            audio_lengths[-1] -= duration_diff
+                            cur_duration -= duration_diff
+                        else:
+                            cur_duration -= audio_lengths[-1]
+                            audio_lengths.pop()
+                            audios.pop()
+                    duration_diff = target_duration - cur_duration
+                    if duration_diff:   # Although unlikely, no audio is generated if duration_diff is 0
+                        audios.append(np.zeros(duration_diff, dtype=np.int16))
+                        audio_lengths.append(audios[-1].shape[0])
                 sampling_rates.append(last_sampling_rate)
             else:
                 model_type_str = task.get("model_type").upper()
@@ -223,8 +256,20 @@ class TTSManager(Observer):
                 task["id"] = self.get_real_id(model_type, task.get("id"))
                 sampling_rates.append(model.sampling_rate)
                 last_sampling_rate = model.sampling_rate
-                audio = self.infer_map[model_type](task, encode=False)
+                target_duration = int(task.get("duration") * last_sampling_rate) if task.get("duration") else None
+                target_duration_min = int(target_duration * task.get("duration_min")) if target_duration else None
+                target_duration_max = int(target_duration * task.get("duration_max")) if target_duration else None
+                while (True):
+                    audio = self.infer_map[model_type](task, encode=False)
+                    cur_duration = audio.shape[0]
+                    if target_duration is None or (target_duration_min <= cur_duration and cur_duration <= target_duration_max):
+                        break
+                    elif cur_duration < target_duration_min:
+                        task["length"] = task.get("length") * 1.1       # Can be configurable
+                    else:
+                        task["length"] = task.get("length") * 0.9       # Can be configurable
                 audios.append(audio)
+                audio_lengths.append(audios[-1].shape[0])
         # 得到最高的采样率
         target_sr = max(sampling_rates)
         # 所有音频要与最高采样率保持一致
