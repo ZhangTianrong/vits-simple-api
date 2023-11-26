@@ -1,5 +1,6 @@
 **/__pycache__
-/Model/
+/env
+/Model
 /logs/
 /cache/
 /upload/
@@ -9,3 +10,4 @@ config.yml
 **/pytorch_model.bin
 **/spm.model
 phrases_dict.txt
+*.wav
