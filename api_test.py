@@ -24,7 +24,7 @@ def voice_speakers():
     return json
 
 
-# 语音合成 voice vits
+# 语音合成 voice duration="5200ms" vits
 def voice_vits(text, id=0, format="wav", lang="auto", length=1, noise=0.667, noisew=0.8, segment_size=50, save_audio=True,
                save_path=None):
     fields = {
@@ -394,36 +394,36 @@ if __name__ == '__main__':
     text = "你好,こんにちは"
 
     ssml = """
-    <speak lang="zh" format="mp3" length="1.2">
-            <voice id="92" >这几天心里颇不宁静。</voice>
-            <voice id="0" model_type="Bert-VITS2">今晚在院子里坐着乘凉，忽然想起日日走过的荷塘，在这满月的光里，总该另有一番样子吧。</voice>
-            <voice id="142">月亮渐渐地升高了，墙外马路上孩子们的欢笑，已经听不见了；</voice>
-            <voice id="0" model_type="Bert-VITS2">妻在屋里拍着闰儿，迷迷糊糊地哼着眠歌。</voice>
-            <voice id="120">我悄悄地披了大衫，带上门出去。</voice><break time="2s"/>
-            <voice id="121">沿着荷塘，是一条曲折的小煤屑路。</voice>
-            <voice id="122">这是一条幽僻的路；白天也少人走，夜晚更加寂寞。</voice>
-            <voice id="123">荷塘四面，长着许多树，蓊蓊郁郁的。</voice>
-            <voice id="124">路的一旁，是些杨柳，和一些不知道名字的树。</voice>
-            <voice id="125">没有月光的晚上，这路上阴森森的，有些怕人。</voice>
-            <voice id="126">今晚却很好，虽然月光也还是淡淡的。</voice><break time="2s"/>
-            <voice id="127">路上只我一个人，背着手踱着。</voice>
-            <voice id="128">这一片天地好像是我的；我也像超出了平常的自己，到了另一个世界里。</voice>
-            <voice id="129">我爱热闹，也爱冷静；<break strength="x-weak"/>爱群居，也爱独处。</voice>
-            <voice id="130">像今晚上，一个人在这苍茫的月下，什么都可以想，什么都可以不想，便觉是个自由的人。</voice>
-            <voice id="131">白天里一定要做的事，一定要说的话，现在都可不理。</voice>
-            <voice id="132">这是独处的妙处，我且受用这无边的荷香月色好了。</voice>
+    <speak lang="zh" format="mp3" length="0.75" noise="0.33" noisew="0.4" sdp_ratio="0">
+            <voice duration="5200ms" id="0">这几天心里颇不宁静。</voice>
+            <voice duration="5200ms" id="0">今晚在院子里坐着乘凉，忽然想起日日走过的荷塘，在这满月的光里，总该另有一番样子吧。</voice>
+            <voice duration="5200ms" id="0">月亮渐渐地升高了，墙外马路上孩子们的欢笑，已经听不见了；</voice>
+            <voice duration="5200ms" id="0">妻在屋里拍着闰儿，迷迷糊糊地哼着眠歌。</voice>
+            <voice duration="5200ms" id="0">我悄悄地披了大衫，带上门出去。</voice><break time="2s"/>
+            <voice duration="5200ms" id="0">沿着荷塘，是一条曲折的小煤屑路。</voice>
+            <voice duration="5200ms" id="0">这是一条幽僻的路；白天也少人走，夜晚更加寂寞。</voice>
+            <voice duration="5200ms" id="0">荷塘四面，长着许多树，蓊蓊郁郁的。</voice>
+            <voice duration="5200ms" id="0">路的一旁，是些杨柳，和一些不知道名字的树。</voice>
+            <voice duration="5200ms" id="0">没有月光的晚上，这路上阴森森的，有些怕人。</voice>
+            <voice duration="5200ms" id="0">今晚却很好，虽然月光也还是淡淡的。</voice><break time="2s"/>
+            <voice duration="5200ms" id="0">路上只我一个人，背着手踱着。</voice>
+            <voice duration="5200ms" id="0">这一片天地好像是我的；我也像超出了平常的自己，到了另一个世界里。</voice>
+            <voice duration="5200ms" id="0">我爱热闹，也爱冷静；<break strength="x-weak"/>爱群居，也爱独处。</voice>
+            <voice duration="5200ms" id="0">像今晚上，一个人在这苍茫的月下，什么都可以想，什么都可以不想，便觉是个自由的人。</voice>
+            <voice duration="5200ms" id="0">白天里一定要做的事，一定要说的话，现在都可不理。</voice>
+            <voice duration="5200ms" id="0">这是独处的妙处，我且受用这无边的荷香月色好了。</voice>
         </speak>
     """
 
     from config import CACHE_PATH
 
-    path = voice_vits(text, save_path=CACHE_PATH)
-    voice_vits_streaming(text, save_path=CACHE_PATH)
-    voice_w2v2_vits(text, save_path=CACHE_PATH)
-    voice_conversion(path, 1, 3, save_path=CACHE_PATH)
-    voice_hubert_vits(path, 0, save_path=CACHE_PATH)
-    voice_dimensional_emotion(path, save_path=CACHE_PATH)
+    # path = voice_vits(text, save_path=CACHE_PATH)
+    # voice_vits_streaming(text, save_path=CACHE_PATH)
+    # voice_w2v2_vits(text, save_path=CACHE_PATH)
+    # voice_conversion(path, 1, 3, save_path=CACHE_PATH)
+    # voice_hubert_vits(path, 0, save_path=CACHE_PATH)
+    # voice_dimensional_emotion(path, save_path=CACHE_PATH)
     voice_ssml(ssml, save_path=CACHE_PATH)
-    voice_bert_vits2("你好",lang="zh", save_path=CACHE_PATH)
-    voice_bert_vits2("こんにちは", lang="ja", save_path=CACHE_PATH)
+    # voice_bert_vits2("你好",lang="zh", save_path=CACHE_PATH)
+    # voice_bert_vits2("こんにちは", lang="ja", save_path=CACHE_PATH)
     # os.system(path)

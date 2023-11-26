@@ -137,6 +137,11 @@ class TTSManager(Observer):
                 emotion = int(element.attrib.get("emotion", root.attrib.get("emotion", 0)))
                 # Bert-VITS2的参数
                 sdp_ratio = int(element.attrib.get("sdp_ratio", root.attrib.get("sdp_ratio", config.SDP_RATIO)))
+                # Duration related
+                duration = element.attrib.get("duration")
+                duration = self.convert_time_string(duration) if duration is not None else None
+                duration_min = float(element.attrib.get("duration_min", root.attrib.get("duration_min", "0.0")))    # config.DURATION_MIN set to 0.0 for now
+                duration_min = float(element.attrib.get("duration_max", root.attrib.get("duration_max", "1.0")))    # config.DURATION_MAX set to 0.0 for now
 
                 voice_element = ET.tostring(element, encoding='unicode')
 
@@ -145,6 +150,7 @@ class TTSManager(Observer):
 
                 matches_voice = re.findall(pattern_voice, voice_element)[0]
                 matches_break = re.split(pattern_break, matches_voice)
+                local_break_count = 0
                 for match in matches_break:
                     strength = re.search(r'\s*strength\s*=\s*[\'\"](.*?)[\'\"]', match)
                     time = re.search(r'\s*time\s*=\s*[\'\"](.*?)[\'\"]', match)
@@ -152,16 +158,16 @@ class TTSManager(Observer):
                     if strength:
                         brk = strength_dict[strength.group(1)]
                         voice_tasks.append({"break": brk})
-                        brk_count += 1
+                        local_break_count += 1
                     # break标签 time属性
                     elif time:
                         brk = self.convert_time_string(time.group(1))
                         voice_tasks.append({"break": brk})
-                        brk_count += 1
+                        local_break_count += 1
                     # break标签 为空说明只写了break，默认停顿0.75s
                     elif match == "":
                         voice_tasks.append({"break": 0.75})
-                        brk_count += 1
+                        local_break_count += 1
                     # voice标签中除了break剩下的就是文本
                     else:
                         voice_tasks.append({"id": id,
@@ -176,9 +182,16 @@ class TTSManager(Observer):
                                             "sdp_ratio": sdp_ratio,
                                             "speaker_lang": self.speaker_lang
                                             })
+                break_count += local_break_count
 
-                # 分段末尾停顿0.75s
-                voice_tasks.append({"break": 0.75})
+                if duration is None or has_break:
+                    # 分段末尾停顿0.75s
+                    voice_tasks.append({"break": 0.75})
+                else:
+                    # 为了区分分段末尾对齐用的停顿，所以用负数
+                    voice_tasks.append({"break": -(
+                        local_break_count*2+1           # 绝对值表示需要考虑的分段数目（含 break），因为整个 voice 元素共用一个 duration.
+                    )})
             elif element.tag == "break":
                 # brk_count大于0说明voice标签中有break
                 if brk_count > 0:
